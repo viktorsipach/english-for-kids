@@ -8,7 +8,7 @@ QUICK START
 
 1 Clone this repository
 
-2 cd fancy-weather
+2 cd english-for-kids
 
 3 npm install
 
