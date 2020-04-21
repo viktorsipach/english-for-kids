@@ -1,4 +1,5 @@
 import { playWord } from './audioPlayer';
+import { updateStatistics } from './statistics';
 
 const addClickTrainHandler = () => {
     const cards = document.querySelector('.cards__container')
@@ -6,6 +7,7 @@ const addClickTrainHandler = () => {
         if (e.target.classList.contains('card__img')) {
             const word = e.target.nextElementSibling.innerText
             playWord(word)
+            updateStatistics(word,'train')
         }
     })
 };
@@ -40,7 +42,7 @@ const rotateCard = (card) => {
 }
 
 const addClickRotateHandler = () => {
-    const SECOND_CHILD = 2;
+    const FIRST_CHILD = 1;
     const THIRD_CHILD = 3;
     const cardsContainer = document.querySelector('.cards__container')
     cardsContainer.addEventListener('click', (e) => {
@@ -48,7 +50,7 @@ const addClickRotateHandler = () => {
             const curCard = e.path[THIRD_CHILD]
             rotateCard(curCard)
         } else if (e.target.classList.contains('card__rotate')) {
-            const curCard = e.path[SECOND_CHILD]
+            const curCard = e.path[FIRST_CHILD]
             rotateCard(curCard)
         }
     })

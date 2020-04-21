@@ -1,8 +1,9 @@
-import cardsData from '../assets/data'
+import cardsData from './cardsData';
 import { bgTrain, bgPlay, audioCorrect, audioError, audioSuccess, audioFailure } from './constants';
 import { addDomElements, addTrainPage, addPlayPage } from './dom';
 import { playAudio, playWord } from './audioPlayer';
 import { addClickTrainHandler, addClickRotateHandler } from './train';
+import { updateStatistics } from './statistics';
 
 const arrWords = [];
 let modeTrain = true;
@@ -22,18 +23,18 @@ const addMainPage = () => {
         } else {
             card.style.background = `${bgPlay}`
         }
-    })
+    });
     images.forEach((el, idx) => {
-        const img = cardsData[idx][idx].image
+        const { image } = cardsData[idx][idx]
         const element = el
-        element.style.backgroundImage = `url(./assets/${img})`
-    })
+        element.style.backgroundImage = `url(./assets/${image})`
+    });
     words.forEach((el, idx) => {
         const text = cardsData[cardsData.length - 1][idx]
         const element = el
         element.innerHTML = `${text}`
     })
-}
+};
 
 const getWordsForGame = () => {
     const wordsNodeList = document.querySelectorAll('.card__word');
@@ -58,6 +59,8 @@ const getWord = () => {
 const gameHandler = (clickedWord) => {
     const FIRST_ELEMENT = 0;
     const AUDIO_DURATION = 1000;
+    const STAR_WIN_SRC = './assets/img/star-win.svg';
+    const STAR_SRC = './assets/img/star.svg'
 
     const stars = document.querySelectorAll('.star');
 
@@ -65,16 +68,18 @@ const gameHandler = (clickedWord) => {
         playAudio(audioCorrect);
         setTimeout(getWord, AUDIO_DURATION)
         const star = document.createElement('img');
-        star.src = './assets/img/star-win.svg';
+        star.src = STAR_WIN_SRC;
         star.classList = 'star';
         stars[FIRST_ELEMENT].before(star)
+        updateStatistics(clickedWord, 'correct')
     } else {
         error += 1
         playAudio(audioError);
         const star = document.createElement('img');
-        star.src = './assets/img/star.svg';
+        star.src = STAR_SRC;
         star.classList = 'star';
         stars[FIRST_ELEMENT].before(star)
+        updateStatistics(hiddenWord, 'error')
     }
 }
 
@@ -93,12 +98,13 @@ const addClickPlayHandler = () => {
 
 const addClickStartGameHandler = () => {
     const btn = document.querySelector('.btn__start')
+    const REPEAT_SRC = './assets/img/repeat.svg'
     btn.addEventListener('click', (e) => {
         const textBtn = e.target.innerHTML
         if (textBtn === 'Start game') {
             const img = document.createElement('img')
             img.classList = 'repeat'
-            img.src = './assets/img/repeat.svg'
+            img.src = REPEAT_SRC
             btn.innerHTML = ''
             btn.append(img)
             btn.classList.add('active__btn')
@@ -108,7 +114,6 @@ const addClickStartGameHandler = () => {
         } else {
             playWord(hiddenWord)
         }
-
     })
 }
 
@@ -132,8 +137,24 @@ const addClickCardHandler = () => {
                 addPlayPage(id)
                 addClickStartGameHandler()
             }
+        } else if (e.target.classList.contains('card__img') || e.target.classList.contains('card__word')) {
+            const { id } = e.target.offsetParent
+            links.forEach((el) => {
+                el.classList.remove('active')
+                if (el.title === id) {
+                    el.classList.add('active')
+                }
+            })
+            if (modeTrain) {
+                addTrainPage(id)
+                addClickTrainHandler()
+                addClickRotateHandler()
+            } else if (modePlay) {
+                addPlayPage(id)
+                addClickStartGameHandler()
+            }
         }
-    })
+    }, { once: true })
 }
 
 const menuHidden = () => {
@@ -143,11 +164,23 @@ const menuHidden = () => {
     })
 }
 
+const addMainPageActive = () => {
+    const FIRST_ELEMENT = 0;
+    const links = document.querySelectorAll('.menu__item');
+    links.forEach((link) => {
+        if (link.classList.contains('active')) {
+            link.classList.remove('active')
+        }
+    })
+    links[FIRST_ELEMENT].classList.add('active')
+}
+
 const addClickMenuHandler = () => {
     const menu = document.querySelector('.menu');
     const links = document.querySelectorAll('.menu__item')
 
     menu.addEventListener('click', (e) => {
+        const statistics = document.querySelector('.statistics');
         const container = document.querySelector('.cards__container')
         if (e.target.classList.contains('menu__item')) {
             e.preventDefault()
@@ -159,18 +192,24 @@ const addClickMenuHandler = () => {
             })
             e.target.classList.add('active')
             if (title === 'main') {
+                statistics.classList.add('hidden')
                 container.remove()
                 addDomElements()
                 addMainPage()
                 addClickCardHandler()
+            } else if (title === 'statistics') {
+                container.classList.add('hidden')
+                statistics.classList.remove('hidden')
             } else {
                 container.remove()
                 addDomElements()
                 if (modeTrain) {
+                    statistics.classList.add('hidden')
                     addTrainPage(title)
                     addClickTrainHandler()
                     addClickRotateHandler()
                 } else if (modePlay) {
+                    statistics.classList.add('hidden')
                     addPlayPage(title)
                     addClickStartGameHandler()
                 }
@@ -189,6 +228,7 @@ const addClickToggleHandler = () => {
     let curId = null;
 
     toggle.addEventListener('click', () => {
+        const statistics = document.querySelector('.statistics');
         const container = document.querySelector('.cards__container')
         links.forEach((el) => {
             if (el.classList.contains('active')) {
@@ -203,10 +243,12 @@ const addClickToggleHandler = () => {
             text.classList.add('text__right')
             text.innerHTML = 'Play'
             menu.style.background = `${bgPlay}`
-            if (curId === 'main') {
+            if (curId === 'main' || curId === 'statistics') {
+                statistics.classList.add('hidden')
                 container.remove()
                 addDomElements()
                 addMainPage()
+                addMainPageActive()
                 addClickCardHandler()
             } else {
                 container.remove()
@@ -221,10 +263,12 @@ const addClickToggleHandler = () => {
             text.classList.remove('text__right')
             text.innerHTML = 'Train'
             menu.style.background = `${bgTrain}`
-            if (curId === 'main') {
+            if (curId === 'main' || curId === 'statistics') {
+                statistics.classList.add('hidden')
                 container.remove()
                 addDomElements()
                 addMainPage()
+                addMainPageActive()
                 addClickCardHandler()
             } else {
                 container.remove()
@@ -237,32 +281,34 @@ const addClickToggleHandler = () => {
     })
 };
 
+
 const finishGame = () => {
     const SHOW_EMOJI_DURATION = 2000;
     if (error === 0) {
         const container = document.querySelector('.cards__container')
         const emoji = document.createElement('div');
         emoji.classList = 'emoji'
-        emoji.innerHTML = `<p class='emoji__text'>You Win!</p><p>&#129321</p>`
+        emoji.innerHTML = `<p class='emoji__text'>You Win!</p><img src='./assets/img/success.jpg'></img>`
         container.remove()
         document.querySelector('.wrapper').append(emoji)
         playAudio(audioSuccess)
         setTimeout(() => {
             error = 0;
-            container.remove()
-            emoji.remove()
-            addDomElements()
-            addMainPage()
-            addClickToggleHandler()
-            addClickCardHandler()
-            addClickMenuHandler()
-            menuHidden()
+            container.remove();
+            emoji.remove();
+            addDomElements();
+            addMainPage();
+            addMainPageActive();
+            addClickToggleHandler();
+            addClickCardHandler();
+            addClickMenuHandler();
+            menuHidden();
         }, SHOW_EMOJI_DURATION);
     } else {
         const container = document.querySelector('.cards__container')
         const emoji = document.createElement('div');
         emoji.classList = 'emoji'
-        emoji.innerHTML = `<p class='emoji__text'>Error ${error}!</p><p>&#128532</p>`
+        emoji.innerHTML = `<p class='emoji__text'>Error ${error}!</p><img src='./assets/img/failure.jpg'></img>`
         container.remove()
         document.querySelector('.wrapper').append(emoji)
         playAudio(audioFailure)
@@ -272,6 +318,7 @@ const finishGame = () => {
             emoji.remove();
             addDomElements();
             addMainPage();
+            addMainPageActive();
             addClickToggleHandler();
             addClickCardHandler();
             addClickMenuHandler();
